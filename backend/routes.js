@@ -2,10 +2,10 @@ const generateAudioBodySchema ={
     type: 'object',
     required : ['surahNumber', 'startAyah', 'endAyah', 'repeatCount'],
     properties: {
-        surahNumber : {type: 'integer', minimum: 1},
-        startAyah : {type: 'integer'},
-        endAyah: {type: 'integer'},
-        repeatCount :{type:'integer'}
+        surahNumber : {type: 'integer', minimum: 1, maximum: 114},
+        startAyah : {type: 'integer', minimum: 1},
+        endAyah: {type: 'integer', minimum: 1},
+        repeatCount :{type:'integer', minimum: 1, maximum: 5}
     }
 }
 
@@ -14,8 +14,19 @@ const schema = {
 }
 
 async function routes (fastify, options) {
-    fastify.post('api/generate-audio', {schema}, async (request, body) =>{
-        //generate audio
+    fastify.post('api/generate-audio', {schema, preValidation:(request, reply, done) =>{
+        const {startAyah, endAyah} = request.body
+
+        if(startAyah >=endAyah){
+            reply.code(400).send({
+                error:'Validation Error',
+                message: 'startAyah must be less than endAyah'
+            })
+            return
+        }
+        done();
+    }}, async (request, body) =>{
+  
     })
 }
 
