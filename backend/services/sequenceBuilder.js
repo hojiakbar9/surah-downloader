@@ -1,6 +1,7 @@
 import fs from 'fs';
 
-function buildSequnce(tempPath, count){
+export default function buildSequnce(tempPath, count){
     const files = fs.readdirSync(tempPath);
-    return  files.map(val => ("file " + val + " " +"\n").repeat(count)).join('');
+    const content =   files.map(val => ("file " + val + " " +"\n").repeat(count)).join('');
+    return content;
 }

@@ -1,5 +1,7 @@
-import resolveAyah from "./services/resolvers.js"
-
+import downloadAyahs from "./services/downloader.js"
+import generatePaths from "./utils/generatePath.js"
+import buildSequence from "./services/sequenceBuilder.js"
+import writeFile from "./utils/fileWriter.js"
 const generateAudioBodySchema ={
     type: 'object',
     required : ['surahNumber', 'startAyah', 'endAyah', 'repeatCount'],
@@ -28,7 +30,15 @@ async function routes (fastify, options) {
         }
         done();
     }}, async (request, reply) =>{
+        const {surahNumber, startAyah, endAyah, repeatCount} = request.body;
+        const jobPath = generatePaths();
         
+        downloadAyahs(surahNumber, startAyah, endAyah, jobPath)
+            .then(()=>{
+                const content = buildSequence(jobPath, repeatCount);
+                writeFile(jobPath, content);
+            });
+    
     })
 }
 
