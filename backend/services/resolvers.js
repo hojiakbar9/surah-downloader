@@ -13,11 +13,12 @@ function resolveAyah(surahNumber, ayahNumber){
     return `${url}/${surahNumberThreeDigit}${ayahNumberThreeDigit}.${audioFormat}`;
 }
 
-function resolvePath(surahNumber, ayahNumber){
+function resolvePath(uniqueJobId, surahNumber, ayahNumber){
     let surahNumberThreeDigit =  surahNumber.toString().padStart(3, '0');
     let ayahNumberThreeDigit =  ayahNumber.toString().padStart(3, '0');
 
-    return `tmp/mushaf-jobs/${surahNumberThreeDigit}_${ayahNumber}.${audioFormat}`;
+    
+    return `tmp/mushaf-jobs/${uniqueJobId}/${surahNumberThreeDigit}_${ayahNumberThreeDigit}.${audioFormat}`;
 }
 
 export {resolveAyah, resolvePath};
