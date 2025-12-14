@@ -14,7 +14,7 @@ const schema = {
 }
 
 async function routes (fastify, options) {
-    fastify.post('api/generate-audio', {schema, preValidation:(request, reply, done) =>{
+    fastify.post('/api/generate-audio', {schema, preValidation:(request, reply, done) =>{
         const {startAyah, endAyah} = request.body
 
         if(startAyah >=endAyah){
@@ -26,9 +26,8 @@ async function routes (fastify, options) {
         }
         done();
     }}, async (request, body) =>{
-  
+        return {success: true}
     })
 }
 
-//ESM
 export default routes;
