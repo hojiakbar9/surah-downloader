@@ -1,4 +1,4 @@
-import resolveAyah from "./services/ayahResolver.js"
+import resolveAyah from "./services/resolvers.js"
 
 const generateAudioBodySchema ={
     type: 'object',
