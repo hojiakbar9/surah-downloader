@@ -1,3 +1,5 @@
+import resolveAyah from "./services/ayahResolver.js"
+
 const generateAudioBodySchema ={
     type: 'object',
     required : ['surahNumber', 'startAyah', 'endAyah', 'repeatCount'],
@@ -25,8 +27,8 @@ async function routes (fastify, options) {
             return
         }
         done();
-    }}, async (request, body) =>{
-        return {success: true}
+    }}, async (request, reply) =>{
+        
     })
 }
 
