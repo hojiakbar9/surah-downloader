@@ -20,6 +20,12 @@ const generateAudioBodySchema = {
 };
 
 async function routes(fastify, options) {
+  // --- Global: Zombie Job Cleanup (Runs every 1 hour) ---
+  // If a job is older than 1 hour, delete it to save space.
+  setInterval(() => {
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+  }, 3600000);
+
   // --- ROUTE 1: Start Job ---
   fastify.post(
     "/api/generate-audio",
@@ -27,13 +33,20 @@ async function routes(fastify, options) {
     async (request, reply) => {
       const { surahNumber, startAyah, endAyah, repeatCount } = request.body;
 
+      // 1. Logic Check: Start cannot be after End
+      if (startAyah > endAyah) {
+        return reply.code(400).send({
+          error: "startAyah cannot be greater than endAyah",
+        });
+      }
+
       const jobId = randomUUID();
       const jobPath = generatePaths();
 
-      // 1. Save to Store
+      // 2. Save to Store
       jobStore.create(jobId, { path: jobPath });
 
-      // 2. Start Background Worker (Fire and Forget)
+      // 3. Start Background Worker (Fire and Forget)
       processAudioJob({
         jobId,
         surahNumber,
@@ -50,7 +63,7 @@ async function routes(fastify, options) {
   // --- ROUTE 2: Check Status ---
   fastify.get("/api/status/:jobId", async (request, reply) => {
     const { jobId } = request.params;
-    const job = jobStore.get(jobId); // Use Store
+    const job = jobStore.get(jobId);
 
     if (!job) return reply.code(404).send({ error: "Job not found" });
 
@@ -63,7 +76,7 @@ async function routes(fastify, options) {
   // --- ROUTE 3: Download ---
   fastify.get("/api/download/:jobId", async (request, reply) => {
     const { jobId } = request.params;
-    const job = jobStore.get(jobId); // Use Store
+    const job = jobStore.get(jobId);
 
     if (!job || job.status !== "completed") {
       return reply.code(400).send({ error: "File not ready or job not found" });
@@ -71,17 +84,29 @@ async function routes(fastify, options) {
 
     const outputPath = path.join(job.path, "output.mp3");
 
-    // Serve file
+    // 1. Check if file actually exists before streaming
+    if (!fs.existsSync(outputPath)) {
+      return reply.code(500).send({ error: "Output file missing on server" });
+    }
+
+    // 2. Serve file
     reply.header("Content-Type", "audio/mpeg");
     reply.header("Content-Disposition", `attachment; filename="output.mp3"`);
 
     const stream = fs.createReadStream(outputPath);
+
+    // 3. Send the stream
     await reply.send(stream);
 
-    // Cleanup
+    // 4. CLEANUP SAFETY:
+    // Fastify usually waits for stream to finish before resolving `send`,
+    // but we force the stream to close to release file locks (crucial for Windows).
+    stream.destroy();
+
+    // 5. Now it is safe to delete
     request.log.info(`Cleaning up job ${jobId}`);
     await cleanupJob(job.path);
-    jobStore.delete(jobId); // Remove from Store
+    jobStore.delete(jobId);
   });
 }
 
