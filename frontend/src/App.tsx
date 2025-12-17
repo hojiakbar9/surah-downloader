@@ -1,9 +1,8 @@
 import { useState, useRef } from "react";
 import "./App.css";
+import { audioApi } from "./services/audioApi";
 
 function App() {
-  const API_BASE = "http://localhost:3000/api";
-
   // State for UI Feedback
   const [audioSrc, setAudioSrc] = useState<string | null>(null);
   const [statusMsg, setStatusMsg] = useState<string>("");
@@ -19,59 +18,6 @@ function App() {
   const wait = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
 
-  // --- STEP 1: Start the Job ---
-  const startJob = async () => {
-    const payload = {
-      surahNumber: parseInt(surahRef.current?.value || "0"),
-      startAyah: parseInt(startRef.current?.value || "0"),
-      endAyah: parseInt(endRef.current?.value || "0"),
-      repeatCount: parseInt(countRef.current?.value || "0"),
-    };
-
-    const response = await fetch(`${API_BASE}/generate-audio`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) throw new Error("Failed to start job");
-
-    const data = await response.json();
-    return data.jobId; // Returns the UUID
-  };
-
-  // --- STEP 2: Poll Status until Completed ---
-  const pollForCompletion = async (jobId: string) => {
-    let isFinished = false;
-
-    while (!isFinished) {
-      setStatusMsg("Processing audio on server...");
-
-      const response = await fetch(`${API_BASE}/status/${jobId}`);
-      const data = await response.json();
-
-      if (data.status === "completed") {
-        isFinished = true;
-      } else if (data.status === "failed") {
-        throw new Error(data.error || "Job failed on server");
-      } else {
-        // If "processing", wait 2 seconds before checking again
-        await wait(2000);
-      }
-    }
-  };
-
-  // --- STEP 3: Download the Result ---
-  const downloadResult = async (jobId: string) => {
-    setStatusMsg("Downloading final audio...");
-
-    const response = await fetch(`${API_BASE}/download/${jobId}`);
-    if (!response.ok) throw new Error("Download failed");
-
-    const blob = await response.blob();
-    return URL.createObjectURL(blob);
-  };
-
   // --- MAIN HANDLER ---
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -80,14 +26,36 @@ function App() {
     setStatusMsg("Starting job...");
 
     try {
+      const payload = {
+        surahNumber: parseInt(surahRef.current?.value || "0"),
+        startAyah: parseInt(startRef.current?.value || "0"),
+        endAyah: parseInt(endRef.current?.value || "0"),
+        repeatCount: parseInt(countRef.current?.value || "0"),
+      };
       // 1. Start
-      const jobId = await startJob();
+      const jobId = await audioApi.startJob(payload);
 
       // 2. Poll
-      await pollForCompletion(jobId);
+      let isFinished = false;
+      while (!isFinished) {
+        setStatusMsg("Processing audio on server...");
+
+        // Use service to check status
+        const data = await audioApi.checkStatus(jobId);
+
+        if (data.status === "completed") {
+          isFinished = true;
+        } else if (data.status === "failed") {
+          throw new Error(data.error || "Job failed");
+        } else {
+          await wait(2000);
+        }
+      }
 
       // 3. Download
-      const audioUrl = await downloadResult(jobId);
+      setStatusMsg("Downloading final audio...");
+      const blob = await audioApi.downloadFile(jobId);
+      const audioUrl = URL.createObjectURL(blob);
 
       setAudioSrc(audioUrl);
       setStatusMsg("Done!");
@@ -154,7 +122,7 @@ function App() {
           }}
         >
           <h3>Generated Audio:</h3>
-          <audio controls src={audioSrc} autoPlay>
+          <audio controls src={audioSrc}>
             Your browser does not support the audio element.
           </audio>
         </div>
