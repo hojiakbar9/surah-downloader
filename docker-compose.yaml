@@ -1,0 +1,21 @@
+
+services:
+  # --- The API Service ---
+  api:
+    build: ./backend
+    container_name: surah-api
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      # Add other ENV vars here if needed
+      - BASE_AUDIO_URL=https://everyayah.com/data
+
+  # --- The React Service ---
+  web:
+    build: ./frontend
+    container_name: surah-web
+    ports:
+      - "8080:80" # Map localhost:8080 to container port 80
+    depends_on:
+      - api
