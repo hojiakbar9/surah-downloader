@@ -69,6 +69,8 @@ async function routes(fastify, options) {
 
     return {
       status: job.status,
+      stage: job.stage,
+      progress: job.progress,
       error: job.error,
     };
   });

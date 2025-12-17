@@ -1,35 +1,30 @@
+// src/store/jobStore.js
 const jobs = new Map();
 
 export const jobStore = {
-  // Create a new job
   create: (id, data) => {
     jobs.set(id, {
       id,
       status: "processing",
+      stage: "initializing", // new field: initializing | downloading | stitching | completed
+      progress: { current: 0, total: 0 }, // new field
       startTime: Date.now(),
       error: null,
-      ...data, // includes path, surahNumber, etc.
+      ...data,
     });
     return jobs.get(id);
   },
 
-  // Get a job by ID
-  get: (id) => {
-    return jobs.get(id);
-  },
+  get: (id) => jobs.get(id),
 
-  // Update a job's status
-  updateStatus: (id, status, error = null) => {
+  // Allow updating any part of the job (status, stage, or progress)
+  update: (id, updates) => {
     const job = jobs.get(id);
     if (job) {
-      job.status = status;
-      if (error) job.error = error;
-      jobs.set(id, job);
+      // Merge existing job with new updates
+      jobs.set(id, { ...job, ...updates });
     }
   },
 
-  // Delete a job (cleanup)
-  delete: (id) => {
-    jobs.delete(id);
-  },
+  delete: (id) => jobs.delete(id),
 };

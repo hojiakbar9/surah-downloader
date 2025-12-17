@@ -9,6 +9,21 @@ export function useAudioGenerator() {
 
   const wait = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
+  // Helper to format the message based on backend data
+  const formatStatusMessage = (data: any) => {
+    if (data.status === "processing") {
+      if (data.stage === "downloading") {
+        const { current, total } = data.progress;
+        const percent = Math.round((current / total) * 100);
+        return `Downloading verses: ${current} / ${total} (${percent}%)`;
+      } else if (data.stage === "stitching") {
+        return "Stitching audio files together... (This may take a moment)";
+      } else {
+        return "Initializing job...";
+      }
+    }
+    return "Processing...";
+  };
 
   const generateAudio = async (payload: JobPayload) => {
     setLoading(true);
@@ -21,16 +36,17 @@ export function useAudioGenerator() {
 
       let isFinished = false;
       while (!isFinished) {
-        setStatusMsg("Processing audio on server...");
-
         const data = await audioApi.checkStatus(jobId);
+
+        // UPDATE: Use the detailed formatter
+        setStatusMsg(formatStatusMessage(data));
 
         if (data.status === "completed") {
           isFinished = true;
         } else if (data.status === "failed") {
           throw new Error(data.error || "Job failed");
         } else {
-          await wait(2000);
+          await wait(1000); // Poll every 1 second for smoother UI
         }
       }
 
@@ -49,11 +65,5 @@ export function useAudioGenerator() {
     }
   };
 
-  return {
-    generateAudio,
-    audioSrc,
-    statusMsg,
-    loading,
-    error,
-  };
+  return { generateAudio, audioSrc, statusMsg, loading, error };
 }

@@ -2,6 +2,10 @@ import axios from "axios";
 import fs from "fs";
 import { resolveAyah, resolvePath } from "./resolvers.js";
 
+/**
+ * Helper: Downloads a single file from a URL to a local path.
+ * Returns a Promise that resolves when the file is fully written.
+ */
 function downloadAyah(url, outputPath) {
   return new Promise(async (resolve, reject) => {
     try {
@@ -16,36 +20,57 @@ function downloadAyah(url, outputPath) {
 
       writer.on("finish", resolve);
       writer.on("error", reject);
-      response.data.on("error", reject);
+      response.data.on("error", (err) => reject(err)); // Catch network stream errors
     } catch (err) {
       reject(new Error(`Failed to fetch ${url}: ${err.message}`));
     }
   });
 }
 
-// Main: Download with Batching Control
-export default async function downloadAyahs(surahNumber, start, end, jobPath) {
-  const batchSize = 5; // Max simultaneous downloads
+/**
+ * Main Downloader Function
+ * - Batches downloads to prevent rate limiting.
+ * - Updates progress individually for smooth UI feedback.
+ */
+export default async function downloadAyahs(
+  surahNumber,
+  start,
+  end,
+  jobPath,
+  onProgress
+) {
+  const batchSize = 10; // Max concurrent downloads
   const allAyahs = [];
 
-  // 1. Create the list of Ayah numbers to download
+  // 1. Generate the list of ayah numbers
   for (let i = start; i <= end; i++) {
     allAyahs.push(i);
   }
 
-  // 2. Process the list in chunks
+  let completedCount = 0;
+
+  // 2. Process in batches
   for (let i = 0; i < allAyahs.length; i += batchSize) {
     const batch = allAyahs.slice(i, i + batchSize);
 
-    // Map the batch to download promises
+    // Map the current batch to promises
     const downloadPromises = batch.map((ayah) => {
       const url = resolveAyah(surahNumber, ayah);
       const path = resolvePath(jobPath, surahNumber, ayah);
-      return downloadAyah(url, path);
+
+      // Call the helper, then update progress immediately upon success
+      return downloadAyah(url, path).then(() => {
+        completedCount++;
+        if (onProgress) {
+          onProgress(completedCount, allAyahs.length);
+        }
+      });
     });
 
+    // Wait for the current batch to finish before starting the next one.
+    // (Note: The .then() blocks above run individually, so progress updates happen in real-time)
     await Promise.all(downloadPromises);
   }
 
-  console.log("All downloads completed.");
+  console.log(`[Job] Downloaded ${completedCount} files.`);
 }
