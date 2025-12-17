@@ -10,7 +10,6 @@ export function useAudioGenerator() {
   const wait = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
 
-  // 2. The main function to run the whole process
   const generateAudio = async (payload: JobPayload) => {
     setLoading(true);
     setAudioSrc(null);
@@ -18,10 +17,8 @@ export function useAudioGenerator() {
     setStatusMsg("Starting job...");
 
     try {
-      // A. Start Job
       const jobId = await audioApi.startJob(payload);
 
-      // B. Poll Status
       let isFinished = false;
       while (!isFinished) {
         setStatusMsg("Processing audio on server...");
@@ -33,11 +30,10 @@ export function useAudioGenerator() {
         } else if (data.status === "failed") {
           throw new Error(data.error || "Job failed");
         } else {
-          await wait(2000); // Wait 2s before retrying
+          await wait(2000);
         }
       }
 
-      // C. Download
       setStatusMsg("Downloading final audio...");
       const blob = await audioApi.downloadFile(jobId);
       const audioUrl = URL.createObjectURL(blob);
