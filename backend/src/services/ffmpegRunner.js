@@ -3,7 +3,7 @@ import path from "path";
 
 export default function runFfmpeg(jobPath) {
   return new Promise((resolve, reject) => {
-    const concatFile = path.join(jobPath, "text.txt");
+    const concatFile = path.join(jobPath, "input.txt");
     const outputFile = path.join(jobPath, "output.mp3");
 
     const ffmpeg = spawn("ffmpeg", [

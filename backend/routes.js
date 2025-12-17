@@ -1,15 +1,12 @@
-import downloadAyahs from "./services/downloader.js";
-import generatePaths from "./utils/generatePath.js";
-import buildSequence from "./services/sequenceBuilder.js";
-import writeFile from "./utils/fileWriter.js";
-import runFfmpeg from "./services/ffmpegRunner.js";
-import cleanupJob from "./services/cleanup.js";
-import fs from "fs";
-import path from "path";
 import { randomUUID } from "crypto";
+import path from "path";
+import fs from "fs";
 
-// IN-MEMORY JOB STORE (Replace with Redis/DB in production)
-const jobs = {};
+// Services & Utils
+import generatePaths from "./src/utils/generatePath.js";
+import cleanupJob from "./src/services/cleanup.js";
+import { jobStore } from "./src/store/jobStore.js";
+import { processAudioJob } from "./src/workers/audioWorker.js";
 
 const generateAudioBodySchema = {
   type: "object",
@@ -23,33 +20,28 @@ const generateAudioBodySchema = {
 };
 
 async function routes(fastify, options) {
-  // --- ROUTE 1: Start the Job ---
+  // --- ROUTE 1: Start Job ---
   fastify.post(
     "/api/generate-audio",
     { schema: { body: generateAudioBodySchema } },
     async (request, reply) => {
       const { surahNumber, startAyah, endAyah, repeatCount } = request.body;
 
-      // Create a unique ID and folder
       const jobId = randomUUID();
       const jobPath = generatePaths();
 
-      // Initialize Job State
-      jobs[jobId] = {
-        status: "processing",
-        path: jobPath,
-        startTime: Date.now(),
-        error: null,
-      };
+      // 1. Save to Store
+      jobStore.create(jobId, { path: jobPath });
 
-      processAudioJob(
+      // 2. Start Background Worker (Fire and Forget)
+      processAudioJob({
         jobId,
         surahNumber,
         startAyah,
         endAyah,
         repeatCount,
-        jobPath
-      );
+        jobPath,
+      });
 
       return { jobId, message: "Job started" };
     }
@@ -58,7 +50,7 @@ async function routes(fastify, options) {
   // --- ROUTE 2: Check Status ---
   fastify.get("/api/status/:jobId", async (request, reply) => {
     const { jobId } = request.params;
-    const job = jobs[jobId];
+    const job = jobStore.get(jobId); // Use Store
 
     if (!job) return reply.code(404).send({ error: "Job not found" });
 
@@ -68,10 +60,10 @@ async function routes(fastify, options) {
     };
   });
 
-  // --- ROUTE 3: Download File ---
+  // --- ROUTE 3: Download ---
   fastify.get("/api/download/:jobId", async (request, reply) => {
     const { jobId } = request.params;
-    const job = jobs[jobId];
+    const job = jobStore.get(jobId); // Use Store
 
     if (!job || job.status !== "completed") {
       return reply.code(400).send({ error: "File not ready or job not found" });
@@ -79,46 +71,18 @@ async function routes(fastify, options) {
 
     const outputPath = path.join(job.path, "output.mp3");
 
-    // Serve the file
+    // Serve file
     reply.header("Content-Type", "audio/mpeg");
     reply.header("Content-Disposition", `attachment; filename="output.mp3"`);
 
     const stream = fs.createReadStream(outputPath);
     await reply.send(stream);
+
+    // Cleanup
     request.log.info(`Cleaning up job ${jobId}`);
     await cleanupJob(job.path);
-    delete jobs[jobId];
+    jobStore.delete(jobId); // Remove from Store
   });
-}
-
-// --- Background Worker Function ---
-async function processAudioJob(
-  jobId,
-  surahNumber,
-  startAyah,
-  endAyah,
-  repeatCount,
-  jobPath
-) {
-  try {
-    await downloadAyahs(surahNumber, startAyah, endAyah, jobPath);
-    const content = buildSequence(jobPath, repeatCount);
-    await writeFile(jobPath, content);
-    await runFfmpeg(jobPath);
-
-    // Update job status to completed
-    if (jobs[jobId]) {
-      jobs[jobId].status = "completed";
-    }
-  } catch (err) {
-    console.error(`Job ${jobId} failed:`, err);
-    if (jobs[jobId]) {
-      jobs[jobId].status = "failed";
-      jobs[jobId].error = err.message;
-    }
-    // Cleanup failed jobs immediately to save space
-    await cleanupJob(jobPath);
-  }
 }
 
 export default routes;
