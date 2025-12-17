@@ -6,6 +6,11 @@ import runFfmpeg from "./services/ffmpegRunner.js";
 import cleanupJob from "./services/cleanup.js";
 import fs from "fs";
 import path from "path";
+import { randomUUID } from "crypto";
+
+// IN-MEMORY JOB STORE (Replace with Redis/DB in production)
+const jobs = {};
+
 const generateAudioBodySchema = {
   type: "object",
   required: ["surahNumber", "startAyah", "endAyah", "repeatCount"],
@@ -17,48 +22,103 @@ const generateAudioBodySchema = {
   },
 };
 
-const schema = {
-  body: generateAudioBodySchema,
-};
-
 async function routes(fastify, options) {
-  fastify.post("/api/generate-audio", { schema }, async (request, reply) => {
-    const { surahNumber, startAyah, endAyah, repeatCount } = request.body;
-    const jobPath = generatePaths();
+  // --- ROUTE 1: Start the Job ---
+  fastify.post(
+    "/api/generate-audio",
+    { schema: { body: generateAudioBodySchema } },
+    async (request, reply) => {
+      const { surahNumber, startAyah, endAyah, repeatCount } = request.body;
 
-    try {
-      await downloadAyahs(surahNumber, startAyah, endAyah, jobPath);
+      // Create a unique ID and folder
+      const jobId = randomUUID();
+      const jobPath = generatePaths();
 
-      const content = buildSequence(jobPath, repeatCount);
-      await writeFile(jobPath, content);
+      // Initialize Job State
+      jobs[jobId] = {
+        status: "processing",
+        path: jobPath,
+        startTime: Date.now(),
+        error: null,
+      };
 
-      await runFfmpeg(jobPath);
+      processAudioJob(
+        jobId,
+        surahNumber,
+        startAyah,
+        endAyah,
+        repeatCount,
+        jobPath
+      );
 
-      const outputPath = path.join(jobPath, "output.mp3");
-      const stream = fs.createReadStream(outputPath);
-
-      reply
-        .header("Content-Type", "audio/mpeg")
-        .header("Content-Disposition", 'attachment; filename="output.mp3"');
-
-      stream.pipe(reply.raw);
-
-      stream.on("close", async () => {
-        await cleanupJob(jobPath);
-      });
-
-      reply.raw.on("close", async () => {
-        stream.destroy();
-        await cleanupJob(jobPath);
-      });
-    } catch (err) {
-      await cleanupJob(jobPath);
-      reply.code(500).send({
-        error: "Audio Generation Failed",
-        message: err.message,
-      });
+      return { jobId, message: "Job started" };
     }
+  );
+
+  // --- ROUTE 2: Check Status ---
+  fastify.get("/api/status/:jobId", async (request, reply) => {
+    const { jobId } = request.params;
+    const job = jobs[jobId];
+
+    if (!job) return reply.code(404).send({ error: "Job not found" });
+
+    return {
+      status: job.status,
+      error: job.error,
+    };
   });
+
+  // --- ROUTE 3: Download File ---
+  fastify.get("/api/download/:jobId", async (request, reply) => {
+    const { jobId } = request.params;
+    const job = jobs[jobId];
+
+    if (!job || job.status !== "completed") {
+      return reply.code(400).send({ error: "File not ready or job not found" });
+    }
+
+    const outputPath = path.join(job.path, "output.mp3");
+
+    // Serve the file
+    reply.header("Content-Type", "audio/mpeg");
+    reply.header("Content-Disposition", `attachment; filename="output.mp3"`);
+
+    const stream = fs.createReadStream(outputPath);
+    await reply.send(stream);
+    request.log.info(`Cleaning up job ${jobId}`);
+    await cleanupJob(job.path);
+    delete jobs[jobId];
+  });
+}
+
+// --- Background Worker Function ---
+async function processAudioJob(
+  jobId,
+  surahNumber,
+  startAyah,
+  endAyah,
+  repeatCount,
+  jobPath
+) {
+  try {
+    await downloadAyahs(surahNumber, startAyah, endAyah, jobPath);
+    const content = buildSequence(jobPath, repeatCount);
+    await writeFile(jobPath, content);
+    await runFfmpeg(jobPath);
+
+    // Update job status to completed
+    if (jobs[jobId]) {
+      jobs[jobId].status = "completed";
+    }
+  } catch (err) {
+    console.error(`Job ${jobId} failed:`, err);
+    if (jobs[jobId]) {
+      jobs[jobId].status = "failed";
+      jobs[jobId].error = err.message;
+    }
+    // Cleanup failed jobs immediately to save space
+    await cleanupJob(jobPath);
+  }
 }
 
 export default routes;
