@@ -8,16 +8,12 @@ interface AudioFormProps {
 }
 
 export function AudioForm({ onSubmit, loading }: AudioFormProps) {
-  // We use State for Surah because changing it affects the UI (Max Ayahs)
   const [selectedSurahId, setSelectedSurahId] = useState<number>(1);
 
-  // We can still use Refs for the simple number inputs to avoid excessive re-renders
   const startRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLInputElement>(null);
   const countRef = useRef<HTMLInputElement>(null);
 
-  // Get the details of the currently selected Surah
-  // If not found (shouldn't happen), default to the first one
   const currentSurah =
     surahs.find((s) => s.number === selectedSurahId) || surahs[0];
 
@@ -44,7 +40,7 @@ export function AudioForm({ onSubmit, loading }: AudioFormProps) {
           value={selectedSurahId}
           onChange={(e) => {
             setSelectedSurahId(Number(e.target.value));
-            // Optional: Reset start/end inputs when surah changes
+
             if (startRef.current) startRef.current.value = "1";
             if (endRef.current) endRef.current.value = "1";
           }}
