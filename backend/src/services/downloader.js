@@ -67,8 +67,6 @@ export default async function downloadAyahs(
       });
     });
 
-    // Wait for the current batch to finish before starting the next one.
-    // (Note: The .then() blocks above run individually, so progress updates happen in real-time)
     await Promise.all(downloadPromises);
   }
 

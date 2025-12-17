@@ -38,7 +38,6 @@ export function useAudioGenerator() {
       while (!isFinished) {
         const data = await audioApi.checkStatus(jobId);
 
-        // UPDATE: Use the detailed formatter
         setStatusMsg(formatStatusMessage(data));
 
         if (data.status === "completed") {
@@ -46,7 +45,7 @@ export function useAudioGenerator() {
         } else if (data.status === "failed") {
           throw new Error(data.error || "Job failed");
         } else {
-          await wait(1000); // Poll every 1 second for smoother UI
+          await wait(1000);
         }
       }
 

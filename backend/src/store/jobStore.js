@@ -21,7 +21,6 @@ export const jobStore = {
   update: (id, updates) => {
     const job = jobs.get(id);
     if (job) {
-      // Merge existing job with new updates
       jobs.set(id, { ...job, ...updates });
     }
   },
