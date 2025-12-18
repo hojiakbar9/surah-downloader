@@ -1,6 +1,6 @@
 const API_BASE = import.meta.env.PROD
-  ? "https://surah-api-d95s.onrender.com/api" // <--- PASTE YOUR RENDER BACKEND URL HERE
-  : "http://localhost:3000/api"; // Local development
+  ? "https://surah-api-d95s.onrender.com/api"
+  : "http://localhost:3000/api";
 
 export interface JobPayload {
   surahNumber: number;

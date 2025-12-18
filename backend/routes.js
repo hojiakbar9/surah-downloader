@@ -26,6 +26,11 @@ async function routes(fastify, options) {
     const oneHourAgo = Date.now() - 60 * 60 * 1000;
   }, 3600000);
 
+  // --- ROUTE 0: Health Check ---
+  fastify.get("/api/health", async (request, reply) => {
+    return { status: "active" };
+  });
+
   // --- ROUTE 1: Start Job ---
   fastify.post(
     "/api/generate-audio",
