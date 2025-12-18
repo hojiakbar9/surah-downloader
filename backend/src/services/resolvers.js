@@ -10,8 +10,6 @@ function resolveAyah(surahNumber, ayahNumber, reciterId) {
   const surahPadded = surahNumber.toString().padStart(3, "0");
   const ayahPadded = ayahNumber.toString().padStart(3, "0");
   // Example: https://everyayah.com/data/Alafasy_128kbps/001001.mp3
-  console.log(reciterId);
-
   return `${BASE_URL}/${reciterId}/${surahPadded}${ayahPadded}.${AUDIO_FORMAT}`;
 }
 
