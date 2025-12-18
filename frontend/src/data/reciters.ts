@@ -7,7 +7,7 @@ const rawReciters: Reciter[] = [
   { id: "Minshawy_Murattal_128kbps", name: "Mohamed Siddiq Al-Minshawy" },
   { id: "Alafasy_128kbps", name: "Mishary Rashid Alafasy" },
   { id: "Husary_128kbps", name: "Mahmoud Khalil Al-Husary" },
-  { id: "Abdurrahmaan_As-Sudais_128kbps", name: "Abdurrahmaan As-Sudais" },
+  { id: "Abdurrahmaan_As-Sudais_192kbps", name: "Abdurrahmaan As-Sudais" },
   { id: "Abdul_Basit_Murattal_192kbps", name: "Abdul Basit (Murattal)" },
   { id: "Hudhaify_128kbps", name: "Ali Al-Hudhaify" },
   { id: "Ali_Jaber_64kbps", name: "Ali Jaber" },
