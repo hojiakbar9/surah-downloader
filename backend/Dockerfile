@@ -2,7 +2,7 @@ FROM node:18-alpine
 
 # 2. INSTALL FFMPEG SYSTEM-WIDE
 
-RUN apk update && apk add --no-cache ffmpeg
+RUN apk add --no-cache ffmpeg
 
 # 3. Create app directory
 WORKDIR /app
