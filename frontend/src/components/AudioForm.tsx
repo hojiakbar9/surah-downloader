@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { type JobPayload } from "../services/audioApi";
 import { surahs } from "../data/surahs";
-
+import { reciters } from "../data/reciters";
 interface AudioFormProps {
   onSubmit: (payload: JobPayload) => void;
   loading: boolean;
@@ -9,7 +9,7 @@ interface AudioFormProps {
 
 export function AudioForm({ onSubmit, loading }: AudioFormProps) {
   const [selectedSurahId, setSelectedSurahId] = useState<number>(1);
-
+  const [reciterId, setReciterId] = useState(reciters[0].id);
   const startRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLInputElement>(null);
   const countRef = useRef<HTMLInputElement>(null);
@@ -21,17 +21,32 @@ export function AudioForm({ onSubmit, loading }: AudioFormProps) {
     e.preventDefault();
 
     const payload: JobPayload = {
+      reciterId: reciterId,
       surahNumber: selectedSurahId,
       startAyah: parseInt(startRef.current?.value || "1"),
       endAyah: parseInt(endRef.current?.value || "1"),
       repeatCount: parseInt(countRef.current?.value || "1"),
     };
-
     onSubmit(payload);
   };
 
   return (
     <form onSubmit={handleSubmit}>
+      {/* ---  Reciter Selection --- */}
+      <div>
+        <label>Select Reciter</label>
+        <select
+          value={reciterId}
+          onChange={(e) => setReciterId(e.target.value)}
+        >
+          {reciters.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* 1. Surah Dropdown */}
       <div>
         <label htmlFor="surah">Select Surah</label>

@@ -7,6 +7,7 @@ export interface JobPayload {
   startAyah: number;
   endAyah: number;
   repeatCount: number;
+  reciterId: string;
 }
 
 export const audioApi = {
