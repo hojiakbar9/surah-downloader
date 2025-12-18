@@ -27,6 +27,7 @@ export function AudioForm({ onSubmit, loading }: AudioFormProps) {
       endAyah: parseInt(endRef.current?.value || "1"),
       repeatCount: parseInt(countRef.current?.value || "1"),
     };
+    console.log(payload);
     onSubmit(payload);
   };
 

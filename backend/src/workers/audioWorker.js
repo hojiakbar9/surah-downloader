@@ -14,6 +14,7 @@ export async function processAudioJob({
   endAyah,
   repeatCount,
   jobPath,
+  reciterId,
 }) {
   try {
     jobStore.update(jobId, {
@@ -29,6 +30,7 @@ export async function processAudioJob({
       startAyah,
       endAyah,
       jobPath,
+      reciterId,
       (current, total) => {
         jobStore.update(jobId, { progress: { current, total } });
       }

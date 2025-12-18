@@ -16,6 +16,7 @@ const generateAudioBodySchema = {
     startAyah: { type: "integer", minimum: 1 },
     endAyah: { type: "integer", minimum: 1 },
     repeatCount: { type: "integer", minimum: 1, maximum: 5 },
+    reciterId: { type: "string" },
   },
 };
 
@@ -36,7 +37,8 @@ async function routes(fastify, options) {
     "/api/generate-audio",
     { schema: { body: generateAudioBodySchema } },
     async (request, reply) => {
-      const { surahNumber, startAyah, endAyah, repeatCount } = request.body;
+      const { surahNumber, startAyah, endAyah, repeatCount, reciterId } =
+        request.body;
 
       // 1. Logic Check: Start cannot be after End
       if (startAyah > endAyah) {
@@ -59,6 +61,7 @@ async function routes(fastify, options) {
         endAyah,
         repeatCount,
         jobPath,
+        reciterId,
       });
 
       return { jobId, message: "Job started" };

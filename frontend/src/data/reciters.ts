@@ -3,7 +3,7 @@ export interface Reciter {
   name: string; // The display name
 }
 
-export const reciters: Reciter[] = [
+const rawReciters: Reciter[] = [
   { id: "Minshawy_Murattal_128kbps", name: "Mohamed Siddiq Al-Minshawy" },
   { id: "Alafasy_128kbps", name: "Mishary Rashid Alafasy" },
   { id: "Husary_128kbps", name: "Mahmoud Khalil Al-Husary" },
@@ -14,3 +14,7 @@ export const reciters: Reciter[] = [
   { id: "Ayman_Sowaid_64kbps", name: "Ayman Sowaid" },
   { id: "Ghamadi_40kbps", name: "Saad Al-Ghamadi" },
 ];
+
+export const reciters = rawReciters.sort((a, b) =>
+  a.name.localeCompare(b.name)
+);

@@ -37,6 +37,7 @@ export default async function downloadAyahs(
   start,
   end,
   jobPath,
+  reciterId,
   onProgress
 ) {
   const batchSize = 10; // Max concurrent downloads
@@ -55,7 +56,7 @@ export default async function downloadAyahs(
 
     // Map the current batch to promises
     const downloadPromises = batch.map((ayah) => {
-      const url = resolveAyah(surahNumber, ayah);
+      const url = resolveAyah(surahNumber, ayah, reciterId);
       const path = resolvePath(jobPath, surahNumber, ayah);
 
       // Call the helper, then update progress immediately upon success
